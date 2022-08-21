@@ -14,8 +14,8 @@ float hum_suelo = 0;
 /*************************Para la bomba de agua********************************/
 int bombaAgua = 5; //indica el pin del rele al arduino
 /************************Para los 2 LED que usaremos***************************/
-int LED1 = 14; //estara encendido cuando se este activado la bomba de agua
-int LED2 = 12; //si la humedad del suelo esta demasiado baja (<45%)
+int LED1 = 14; //se encendera 5 segundos antes de la bomba de agua
+int LED2 = 12; //estara encendido cuando se este activado la bomba de agua
 
 /********************Parametros de conexion Wifi*******************************/
 // Depende de cada maquina
