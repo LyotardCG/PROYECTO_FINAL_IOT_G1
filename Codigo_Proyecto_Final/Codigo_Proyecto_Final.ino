@@ -12,7 +12,7 @@ DHT dht(DHTPIN, DHTTYPE, 22);
 //definimos una variable para almacenar las lecturas del sensor de humedad
 float hum_suelo = 0;
 /*************************Para la bomba de agua********************************/
-int bombaAgua=5;  //indica el pin del rele al arduino
+int bombaAgua = 5; //indica el pin del rele al arduino
 /************************Para los 2 LED que usaremos***************************/
 int LED1 = 14; //estara encendido cuando se este activado la bomba de agua
 int LED2 = 12; //si la humedad del suelo esta demasiado baja (<45%)
@@ -23,10 +23,12 @@ const char* ssid = "Sergio"; //nombre de la red con la que trabajamos
 const char* password = "07503108"; //contraseña del la red con la que trabajamos
 /*************************MQTT*************************************************/
 const char* mqtt_server = "192.168.0.5";
+String mensaje; //para almacenar el topic
+String inform; //para almacenar el payload
 
 
 // Creamos unas variables para almacenar los mensajes
-char p1[15], p2[15], p3[15];
+char dht22tem[15], dht22hum[15], sensorhum[15];
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -54,8 +56,8 @@ void setup_wifi() {
 }
 //Funcion para comprobar si recibe el topic
 void callback(char* topic, byte* payload, unsigned int length) {
-  String mensaje = topic;
-  String inform = "";
+  mensaje = topic;
+  inform = "";
   Serial.print("El mensaje llegó [");
   Serial.print(mensaje);
   Serial.print("] ");
@@ -84,6 +86,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(LED2, LOW);
     }
   }
+
+  //Control del riego
 }
 
 void reconnect() {
@@ -94,17 +98,18 @@ void reconnect() {
       Serial.println("Conectado");
       client.publish("led1", "Conectado");
       client.publish("led2", "Conectado");
-      client.publish("p1", "Conectado");
-      client.publish("p2", "Conectado");
-      client.publish("p3", "Conectado");
+      client.publish("dht22-tem", "Conectado");
+      client.publish("dht22-hum", "Conectado");
+      client.publish("sensor-hum_suelo", "Conectado");
+      client.publish("control_riego", "Conectado");
 
       //nos suscribimos a los topic
       client.subscribe("led1");
       client.subscribe("led2");
-      client.subscribe("p1");
-      client.subscribe("p2");
-      client.subscribe("p3");
-
+      client.subscribe("dht22-tem");
+      client.subscribe("dht22-hum");
+      client.subscribe("sensor-hum_suelo");
+      client.subscribe("control_riego");
 
     } else {
       Serial.print("Conexion fallida, rc=");
@@ -146,17 +151,7 @@ void loop() {
   // Capturamos el valor del sensor de humedad de suelo en la variable hum_suelo
   // Realizamos un pequeño calculo para transformar la lectura analogica a un rango de 0-100
   hum_suelo = (100.00 - ((analogRead(sensorHumedad) * 100) / 1024.00));
-
-  /********************************************************************************/
-  /*
-    digitalWrite(bombaAgua, LOW); //prender bomba de agua
-    delay(2000);
-
-    digitalWrite(bombaAgua, HIGH); //apagar bomba de agua
-    delay(1000);
-  */
-  /********************************************************************************/
-
+  
   /*
     // Imprimimos las lecturas del sensor DHT22
     Serial.print(F("\n ===Lecturas del DHT22==="));
@@ -170,35 +165,50 @@ void loop() {
     Serial.print(F("\n Humedad del suelo (%): "));
     Serial.print(hum_suelo);
     Serial.print("\n");
-
-    delay(5000); //esperamos 5 segundos
   */
+  
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
 
+  riego_automatico(tem,hum,hum_suelo);
+
   long now = millis();
-  //Serial.println(now - lastMsg);
-  if (now - lastMsg >= 4999) {
+
+  if (now - lastMsg >= 5000) {
     lastMsg = now;
-    dtostrf(tem, 0, 2, p1);
-    dtostrf(hum, 0, 2, p2);
-    dtostrf(hum_suelo, 0, 2, p3);
-    client.publish("p1", p1);
-    client.publish("p2", p2);
-    client.publish("p3", p3);
+    dtostrf(tem, 0, 2, dht22tem);
+    dtostrf(hum, 0, 2, dht22hum);
+    dtostrf(hum_suelo, 0, 2, sensorhum);
+    client.publish("dht22-tem", dht22tem);
+    client.publish("dht22-hum", dht22hum);
+    client.publish("sensor-hum_suelo", sensorhum);
     delay(500);
   }
 }
 
-void control_bomba(float tem, float hum, float hum_suelo) {
-  if (tem >= 30 && hum <= 25 && hum_suelo <= 30 ) {
+void riego_automatico(float tem, float hum, float hum_suelo) {
+  if ((tem >= 30 && hum <= 30) || (hum <= 20) || (hum_suelo <= 20 )) {
+    //el LED2 se encendera por 5 segundos antes de activarse el riego
+    digitalWrite(LED1,HIGH); //encendemos el led1 mientras la bomba este encendida
+    delay(5000);
+    digitalWrite(LED1,LOW);
+    
     digitalWrite(bombaAgua, LOW); //prender bomba de agua
-    delay(5000);
+    delay(5000); //la bomba estara encendidad por 5 segundos
+    
+    digitalWrite(LED2,HIGH); //encendemos el led 2 mientras la bomba este encendida
   }
-  else if (tem == 3) { //presiona el boton
-    delay(5000);
+  else if (mensaje == "control_riego") { //si presiona el boton
+    if (inform == "true") {
+      digitalWrite(bombaAgua, LOW); //prender bomba de agua
+
+      digitalWrite(LED2,HIGH); //encendemos el led 2 mientras la bomba este encendida
+    }
+    else {
+      digitalWrite(bombaAgua, HIGH); //apagar bomba de agua}
+    }
   } else { //si no pasa nada de los anterior estara apagada
     digitalWrite(bombaAgua, HIGH); //apagar bomba de agua
   }
