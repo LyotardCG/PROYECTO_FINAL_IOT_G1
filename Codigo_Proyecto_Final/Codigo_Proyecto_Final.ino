@@ -56,17 +56,17 @@ String inform; //Para almacenar el payload
 //Creamos unas variables para almacenar los mensajes que seran posteriormente publicados
 char dht22tem[15], dht22hum[15], sensorhum[15], sensorultrasonic[15];
 
+/******************************************************************************/
 // Crea una clase WiFiClient para conectarse al servidor MQTT
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0; //Definimos una variable donde se almacenara el momento en donde se envio el ultimo mensaje
 
-/**************************************************************************/
+/******************************************************************************/
 //Asiganamos una variable para almacenar el estado de la bomba
 String estadoBomba = "0";
 
-/***************************************************************************/
-
+/******************************************************************************/
 void setup_wifi() {
   delay(10);
   // Empezamos conectándonos a una red WiFi
@@ -84,8 +84,9 @@ void setup_wifi() {
   //Despues de lograrse la conexion imprimos un mensaje
   Serial.println("Conectado a la red WiFi con dirección IP: ");
   Serial.println(WiFi.localIP()); //Imprimimos la dirección IP de la red Wifi
-
 }
+
+/******************************************************************************/
 //Funcion para comprobar si recibe el topic
 void callback(char* topic, byte* payload, unsigned int length) {
   mensaje = topic; //Almacenamos el topic en la variable mensaje
@@ -100,14 +101,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   //Serial.print(inform); //Imprimos el string que contiene al payload
   //Serial.println();
-
 }
 
+/******************************************************************************/
 void reconnect() { //Funcion para reconectarnos
   // Loop hasta que estemos reconectados
   while (!client.connected()) {
     Serial.print("Intentando conexion MQTT...");
-    if (client.connect("ESP8266Client")) { //Si estamos conectados, entonces...
+    if (client.connect("ESP8266Client",mqtt_user, mqtt_pass)) { //Si estamos conectados, entonces...
       //Publicamos en cada uno de los topic el mensaje Conectado
       Serial.println("Conectado");
       client.publish("dht22-tem", "Conectado");
@@ -123,7 +124,6 @@ void reconnect() { //Funcion para reconectarnos
       client.subscribe("sensor-ultrasonido");
       client.subscribe("control_riego");
 
-
     } else { //si falla la conexión se imprime un mensaje
       Serial.print("Conexion fallida, rc=");
       Serial.print(client.state()); //Se imprime la condicion del cliente
@@ -133,9 +133,10 @@ void reconnect() { //Funcion para reconectarnos
   }
 }
 
+/******************************************************************************/
 void setup() {
   /*****************Para la bomba de agua**********************/
-  pinMode(bombaAgua, OUTPUT); //establecemos el pin 8 como salida
+  pinMode(bombaAgua, OUTPUT); //Establecemos el pin 8 como salida
 
   /************Para el sensor ultrasonido HC-SR04**************/
   // Ponemos el pin Trig en modo salida
@@ -144,21 +145,22 @@ void setup() {
   pinMode(PinEcho, INPUT); //porque recibira un valor
 
   /*****************Para los LED*******************************/
-  pinMode(LED1, OUTPUT); //establecemos el pin 14 (D5) como salida
-  pinMode(LED2, OUTPUT); //establecemos el pin 12 (D6) como salida
+  pinMode(LED1, OUTPUT); //Establecemos el pin 14 (D5) como salida
+  pinMode(LED2, OUTPUT); //Establecemos el pin 12 (D6) como salida
 
   /******Para el sensor DHT22 y el de humedad de suelo*********/
-  dht.begin(); //permite configurar el pin del sensor como INPUT_PULLUP
-  pinMode(sensorHumedad, INPUT); //definimos el pin del sensor como INPUT
+  dht.begin(); //Permite configurar el pin del sensor como INPUT_PULLUP
+  pinMode(sensorHumedad, INPUT); //Definimos el pin del sensor como INPUT
 
   /************************************************************/
-  Serial.begin(115200); //se inicio la comunicación serial
+  Serial.begin(115200); //Se inicio la comunicación serial
 
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  setup_wifi(); //Llamamos a la función para conectarnos a nuestra red wifi
+  client.setServer(mqtt_server, 1883); //Enviamos el servidor y nuestro puerto
+  client.setCallback(callback); //Establecemos el callback
 }
 
+/******************************************************************************/
 void loop() {
 
   /*********************Para el sensor DHT22********************/
@@ -219,9 +221,9 @@ void loop() {
   /********************************************************************/
   //Si nos desconectamos trateremos de volver a conetarnos
   if (!client.connected()) {
-    reconnect();
+    reconnect();//llamamos a la función reconnect
   }
-  client.loop();
+  client.loop(); //hacemos un loop
 
   riego_automatico(tem, hum, hum_suelo); //Llamamos a la función del riego automatico
 
@@ -259,9 +261,9 @@ void loop() {
 
     delay(500); //esperamos 500 milisegundos
   }
-
 }
 
+/******************************************************************************/
 void riego_automatico(float tem, float hum, float hum_suelo) {
   //Iniciamos con la bomba apagada
   digitalWrite(bombaAgua, HIGH); //apagar bomba de agua
@@ -295,9 +297,9 @@ void riego_automatico(float tem, float hum, float hum_suelo) {
     //Actualizamos los estados
     estadoBomba = "0";
   }
-
 }
 
+/******************************************************************************/
 //Creamos una función para calcular el promedio de las lecturas en el arreglo
 float promedio(float a[]) {
   float total = 0.0;
